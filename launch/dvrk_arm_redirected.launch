@@ -5,7 +5,7 @@
 
   <arg name="model" default="$(find dvrk_model)/model/$(arg arm).urdf.xacro" />
   
-  <node name="dvrk_$(arg arm)_node"
+  <node name="dvrk_$(arg arm)_SIM_node"
         pkg="dvrk_robot"
         type="dvrk_console_json"        
         args="-j $(arg config)"                     
@@ -16,7 +16,7 @@
       <arg name="gui" default="false" />
       <arg name="rate" default="20" />
       
-      <param name="robot_description" command="rosrun xacro xacro.py $(arg model) prefix:=$(arg arm)_"/>
+      <param name="robot_description" command="rosrun xacro xacro.py $(arg model) prefix:=$(arg arm)_SIM_"/>
       <param name="use_gui" value="$(arg gui)"/>
       <param name="rate" value="$(arg rate)"/>
      //<remap from="position_cartesian_current" to="trash_position_cartesian_current" />
@@ -24,9 +24,9 @@
 
 
       <rosparam param="source_list" subst_value="True">
-          [/dvrk_pmd/$(arg arm)/state_joint_current,
-           /dvrk_pmd/$(arg arm)/state_jaw_current,
-           /dvrk_pmd/$(arg arm)/state_gripper_current]
+          [/$(arg arm)/state_joint_current,
+           /$(arg arm)/state_jaw_current,
+           /$(arg arm)/state_gripper_current]
       </rosparam>
 
       <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
