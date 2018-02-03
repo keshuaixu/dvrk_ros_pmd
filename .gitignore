@@ -14,4 +14,4 @@ cisstLog.txt
 .ropeproject
 *.log
 *.html
-src/.idea
+.idea
