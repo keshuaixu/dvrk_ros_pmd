@@ -2,6 +2,7 @@ import logging
 import socket
 
 import struct
+import threading
 
 rx_format = '<4L12l12L'
 tx_format = '<L4l4L4l'
@@ -15,13 +16,18 @@ def separate_packet(packet, num_of_elements):
 
 
 class PMDCustomProtocol:
-    def __init__(self, ip_address, port=18021):
+    def __init__(self, ip_address, port=18021, offset=0):
+        self.offset = offset
         self.address = (ip_address, port)
         self.sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_rx.bind(('', port))
         self.sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_tx.setblocking(False)
         self.rx_callback = None
+
+    def start_receive_loop(self, callback):
+        self.rx_callback = callback
+        threading.Thread(target=self.rx_loop, daemon=True).start()
 
     def rx_loop(self):
         while True:

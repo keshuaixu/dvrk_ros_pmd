@@ -9,6 +9,8 @@ import time
 from pypmd import PMD
 import logging
 
+from custom_protocol import PMDCustomProtocol
+
 
 def rearrange_pot_read(analog_read):
     return [analog_read[7], analog_read[1], analog_read[6], analog_read[3]]
@@ -34,14 +36,8 @@ class IOPMD:
 
         self.requested_current = [0.] * 8
 
-        pmd_1 = PMD(host=pmd1)
-        pmd_5 = PMD(host=pmd5)
-
-        # pmd_1.parse_script('../config/c_mo_2.txt')
-        # pmd_1.set_operating_mode(1, axis_enabled=1, motor_output_enabled=1, current_control_enabled=1)
-
-        self.pmd = [pmd_1, pmd_5]
-        [x.multi_update() for x in self.pmd]
+        pmd_1 = PMDCustomProtocol(ip_address=pmd1, offset=0)
+        pmd_5 = PMDCustomProtocol(ip_address=pmd5, offset=4)
 
 
     def sync_states(self):
