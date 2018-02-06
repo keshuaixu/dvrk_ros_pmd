@@ -1,14 +1,11 @@
 import argparse
-import math
+import threading
 
-import functools
 import rospy
-from std_msgs.msg import *
-import time
-
-from pypmd import PMD
 import logging
+from std_msgs.msg import *
 
+import custom_protocol
 from custom_protocol import PMDCustomProtocol
 
 
@@ -35,37 +32,57 @@ class IOPMD:
                                                          std_msgs.msg.Int32MultiArray, self.set_encoder_cb)
 
         self.requested_current = [0.] * 8
+        self.buffered_states = {
+            'mode': [0.] * 8,
+            'current': [0.] * 8,
+            'velocity': [0.] * 8,
+            'position': [0.] * 8,
+            'temperature': [0.] * 8,
+            'analog': [0.] * 8,
+            'fault': [0.] * 8,
+        }
+
+        self.buffered_commands = {
+            'command': 0,
+            'command_payload': [0.] * 8,
+            'mode': [0] * 8,
+            'motor_command': [0] * 8,
+        }
+
+        self.publish_sem = {0: threading.BoundedSemaphore(1), 4: threading.BoundedSemaphore(1)}
 
         pmd_1 = PMDCustomProtocol(ip_address=pmd1, offset=0)
-        print(pmd1)
         pmd_1.start_receive_loop(self.pmd_callback)
         pmd_5 = PMDCustomProtocol(ip_address=pmd5, offset=4)
         pmd_5.start_receive_loop(self.pmd_callback)
+        logging.info('pmd init complete')
 
-    def pmd_callback(self, **kwargs):
-        print(kwargs)
+    def pmd_callback(self, offset, **kwargs):
+        try:
+            self.publish_sem[offset].release()
+        except ValueError:
+            pass
 
-    def sync_states(self):
-        pots = [(4.5 / 5) * x for x in
-                (rearrange_pot_read(self.pmd[0].read_analogs()) + rearrange_pot_read(self.pmd[1].read_analogs()))]
+        for k, v in kwargs.items():
+            self.buffered_states[k][offset:offset + 4] = v
+
+    def publish_states(self):
+        pots = [(4.5 / 5) * x for x in self.buffered_states['analog']]
         self.pub_pot_voltage.publish(std_msgs.msg.Float64MultiArray(data=pots))
 
-        encoder_positions = [self.pmd[0].read_encoder_position(i) for i in range(4)] + [
-            self.pmd[1].read_encoder_position(i) for i in range(4)]
+        encoder_positions = self.buffered_states['position']
         self.pub_encoder_position.publish(std_msgs.msg.Int32MultiArray(data=encoder_positions))
 
-        encoder_velocities = [self.pmd[0].read_encoder_velocity(i) for i in range(4)] + [
-            self.pmd[1].read_encoder_velocity(i) for i in range(4)]
+        encoder_velocities = self.buffered_states['velocity']
         self.pub_encoder_velocity.publish(std_msgs.msg.Int32MultiArray(data=encoder_velocities))
 
-        motor_currents = [self.pmd[0].read_motor_current(i) for i in range(4)] + [self.pmd[1].read_motor_current(i)
-                                                                                  for i in range(4)]
+        motor_currents = [x / custom_protocol.AMPS_TO_BITS for x in self.buffered_states['current']]
         self.pub_current_feedback.publish(std_msgs.msg.Float64MultiArray(data=motor_currents))
 
-        [self.pmd[0].set_motor_current(axis, current, full_scale_current=4) for axis, current in enumerate(self.requested_current[:4])]
-        [self.pmd[1].set_motor_current(axis, current) for axis, current in enumerate(self.requested_current[4:])]
-
-        [x.multi_update() for x in self.pmd]
+    def publish_states_loop(self):
+        while True:
+            [sem.acquire() for sem in self.publish_sem.values()]
+            self.publish_states()
 
     def set_current_cb(self, data):
         self.requested_current = data.data
@@ -76,6 +93,7 @@ class IOPMD:
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser()
     parser.add_argument('--arm', help='name of the arm')
     parser.add_argument('--pmd1', help='hostname of the pmd for joint 1-4')

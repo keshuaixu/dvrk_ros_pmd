@@ -6,6 +6,7 @@ import threading
 
 rx_format = '<4L12l12L'
 tx_format = '<L4l4L4l'
+AMPS_TO_BITS = 1310
 
 
 def separate_packet(packet, num_of_elements):
