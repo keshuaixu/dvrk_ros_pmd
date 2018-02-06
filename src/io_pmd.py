@@ -37,8 +37,13 @@ class IOPMD:
         self.requested_current = [0.] * 8
 
         pmd_1 = PMDCustomProtocol(ip_address=pmd1, offset=0)
+        print(pmd1)
+        pmd_1.start_receive_loop(self.pmd_callback)
         pmd_5 = PMDCustomProtocol(ip_address=pmd5, offset=4)
+        pmd_5.start_receive_loop(self.pmd_callback)
 
+    def pmd_callback(self, **kwargs):
+        print(kwargs)
 
     def sync_states(self):
         pots = [(4.5 / 5) * x for x in
@@ -85,6 +90,6 @@ if __name__ == '__main__':
 
     r = rospy.Rate(100)
     while not rospy.is_shutdown():
-        io_pmd.sync_states()
+        # io_pmd.sync_states()
         # r.sleep()
-        # rospy.spin()
+        rospy.spin()

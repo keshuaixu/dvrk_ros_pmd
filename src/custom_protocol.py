@@ -20,6 +20,7 @@ class PMDCustomProtocol:
         self.offset = offset
         self.address = (ip_address, port)
         self.sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock_rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock_rx.bind(('', port))
         self.sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_tx.setblocking(False)
@@ -33,7 +34,7 @@ class PMDCustomProtocol:
         while True:
             try:
                 received, address = self.sock_rx.recvfrom(struct.calcsize(rx_format))
-                if address is self.address[0]:
+                if address[0] == self.address[0]:
                     unpacked = struct.unpack(rx_format, received)
                     separated = separate_packet(unpacked, (4, 4, 4, 4, 4, 4, 4))
                     packet = {
@@ -46,7 +47,7 @@ class PMDCustomProtocol:
                         'fault': next(separated),
                     }
                     if self.rx_callback is not None:
-                        self.rx_callback(**packet)
+                        self.rx_callback(**packet, offset=self.offset)
 
             except Exception:
                 logging.exception('error in the rx loop')
