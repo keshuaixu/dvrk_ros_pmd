@@ -8,21 +8,23 @@ rx_format = '<4L12l12L'
 tx_format = '<L4l4L4l'
 AMPS_TO_BITS = 1310
 
+MODES = {'current': 0b0111}
+
 
 def separate_packet(packet, num_of_elements):
     index = 0
     for i in num_of_elements:
         yield packet[index:index + i]
-        index = i
+        index = index + i
 
 
 class PMDCustomProtocol:
-    def __init__(self, ip_address, port=18021, offset=0):
+    def __init__(self, ip_address, rx_port=18021, tx_port=18022, offset=0):
         self.offset = offset
-        self.address = (ip_address, port)
+        self.address = (ip_address, tx_port)
         self.sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock_rx.bind(('', port))
+        self.sock_rx.bind(('', rx_port))
         self.sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_tx.setblocking(False)
         self.rx_callback = None

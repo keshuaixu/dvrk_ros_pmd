@@ -55,6 +55,10 @@ class IOPMD:
         pmd_1.start_receive_loop(self.pmd_callback)
         pmd_5 = PMDCustomProtocol(ip_address=pmd5, offset=4)
         pmd_5.start_receive_loop(self.pmd_callback)
+
+        self.pmd_custom = (pmd_1, pmd_5)
+
+        threading.Thread(target=self.publish_states_loop, daemon=True).start()
         logging.info('pmd init complete')
 
     def pmd_callback(self, offset, **kwargs):
@@ -67,7 +71,7 @@ class IOPMD:
             self.buffered_states[k][offset:offset + 4] = v
 
     def publish_states(self):
-        pots = [(4.5 / 5) * x for x in self.buffered_states['analog']]
+        pots = [(4.5 / 5) * (10 / 32767) * x for x in self.buffered_states['analog']]
         self.pub_pot_voltage.publish(std_msgs.msg.Float64MultiArray(data=pots))
 
         encoder_positions = self.buffered_states['position']
@@ -77,7 +81,11 @@ class IOPMD:
         self.pub_encoder_velocity.publish(std_msgs.msg.Int32MultiArray(data=encoder_velocities))
 
         motor_currents = [x / custom_protocol.AMPS_TO_BITS for x in self.buffered_states['current']]
+        motor_currents = [0.] * 8
         self.pub_current_feedback.publish(std_msgs.msg.Float64MultiArray(data=motor_currents))
+
+        print(f'\r{self.buffered_states}', end='')
+        sys.stdout.flush()
 
     def publish_states_loop(self):
         while True:
@@ -85,7 +93,11 @@ class IOPMD:
             self.publish_states()
 
     def set_current_cb(self, data):
-        self.requested_current = data.data
+        requested_current = data.data
+        self.pmd_custom[0].send(mode=(custom_protocol.MODES['current'],) * 4, motor_command=[
+            int(custom_protocol.AMPS_TO_BITS * a) for a in requested_current[0:4]])
+        self.pmd_custom[1].send(mode=(custom_protocol.MODES['current'],) * 4,
+                                motor_command=[int(custom_protocol.AMPS_TO_BITS * a) for a in requested_current[4:8]])
 
     def set_encoder_cb(self, data):
         print('set_encoder_cb')
