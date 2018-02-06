@@ -37,8 +37,8 @@ class IOPMD:
         pmd_1 = PMD(host=pmd1)
         pmd_5 = PMD(host=pmd5)
 
-        pmd_1.parse_script('../config/c_mo_2.txt')
-        pmd_1.set_operating_mode(1, axis_enabled=1, motor_output_enabled=1, current_control_enabled=1)
+        # pmd_1.parse_script('../config/c_mo_2.txt')
+        # pmd_1.set_operating_mode(1, axis_enabled=1, motor_output_enabled=1, current_control_enabled=1)
 
         self.pmd = [pmd_1, pmd_5]
         [x.multi_update() for x in self.pmd]
