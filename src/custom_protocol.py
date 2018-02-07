@@ -29,6 +29,7 @@ class PMDCustomProtocol:
         # self.sock_tx.setblocking(False)
         self.sock_tx.settimeout(0.1)
         self.rx_callback = None
+        self.tx_lock = threading.Lock()
 
     def start_receive_loop(self, callback):
         self.rx_callback = callback
@@ -58,4 +59,5 @@ class PMDCustomProtocol:
 
     def send(self, command=0, command_payload=(0, 0, 0, 0), mode=(0, 0, 0, 0), motor_command=(0, 0, 0, 0)):
         packet = struct.pack(tx_format, command, *command_payload, *mode, *motor_command)
-        self.sock_tx.sendto(packet, self.address)
+        with self.tx_lock:
+            self.sock_tx.sendto(packet, self.address)

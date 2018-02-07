@@ -10,7 +10,7 @@ from std_msgs.msg import *
 import custom_protocol
 from custom_protocol import PMDCustomProtocol
 
-current_direction = (-1, 1, 1, 1, 1, 1, 1, 1)
+current_direction = (-1, 1, 1, 1, -1, 1, -1, 1)
 
 
 def rearrange_pot_read(analog_read):
@@ -43,10 +43,6 @@ class IOPMD:
 
         self.pmd_rp = (PMD(host=pmd1), PMD(host=pmd5))
 
-
-
-
-
         self.ros_io_namespace = f'/dvrk/{self.arm}/io/external'
 
         self.pub_encoder_position = rospy.Publisher(f'{self.ros_io_namespace}/encoder_position',
@@ -71,7 +67,6 @@ class IOPMD:
 
         self.pmd_custom = (pmd_1, pmd_5)
 
-
         logging.info('pmd init complete')
 
     def pmd_callback(self, offset, **kwargs):
@@ -85,6 +80,8 @@ class IOPMD:
 
     def publish_states(self):
         pots = [(4.5 / 5) * (10 / 32767) * x for x in self.buffered_states['analog']]
+        # pots = [(10 / 32767) * x for x in self.buffered_states['analog']]
+
         self.pub_pot_voltage.publish(std_msgs.msg.Float64MultiArray(data=pots))
 
         encoder_positions = self.buffered_states['position']
@@ -107,11 +104,13 @@ class IOPMD:
 
     def set_current_cb(self, data):
         requested_current = data.data
-        self.pmd_custom[0].send(mode=(custom_protocol.MODES['current'],) * 4, motor_command=[
-            int(custom_protocol.AMPS_TO_BITS * a) * 2 * current_direction[i] for i, a in enumerate(requested_current[0:4])])
-        self.pmd_custom[1].send(mode=(custom_protocol.MODES['current'],) * 4,
-                                motor_command=[int(custom_protocol.AMPS_TO_BITS * a) * current_direction[i + 4] for i, a
-                                               in enumerate(requested_current[4:8])])
+        mode = custom_protocol.MODES['current']
+        self.pmd_custom[0].send(mode=(mode,) * 4,
+                                motor_command=[int(custom_protocol.AMPS_TO_BITS * a) * 2 * current_direction[i] for i, a
+                                               in enumerate(requested_current[0:4])])
+        self.pmd_custom[1].send(mode=(mode,) * 4,
+                                motor_command=[int(custom_protocol.AMPS_TO_BITS * a) * 2 * current_direction[i + 4] for
+                                               i, a in enumerate(requested_current[4:8])])
 
     def set_encoder_cb(self, data):
         positions = data.data
@@ -133,7 +132,6 @@ if __name__ == '__main__':
 
     io_pmd = IOPMD(arm=args.arm, pmd1=args.pmd1, pmd5=args.pmd5)
     print('pmd init')
-
 
     while not rospy.is_shutdown():
         # io_pmd.sync_states()
