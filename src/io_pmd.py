@@ -41,7 +41,7 @@ class IOPMD:
 
         self.publish_sem = {0: threading.BoundedSemaphore(1), 4: threading.BoundedSemaphore(1)}
 
-        self.pmd_rp = (PMD(host=pmd1), PMD(host=pmd5))
+        self.pmd_rp = (PMD(host=pmd1, open=False), PMD(host=pmd5, open=False))
 
         self.ros_io_namespace = f'/dvrk/{self.arm}/io/external'
 
@@ -114,8 +114,10 @@ class IOPMD:
 
     def set_encoder_cb(self, data):
         positions = data.data
-        self.pmd_rp[0].set_actual_encoder_position(positions[0:4])
-        self.pmd_rp[1].set_actual_encoder_position(positions[4:8])
+        with self.pmd_rp[0].transport.open():
+            self.pmd_rp[0].set_actual_encoder_position(positions[0:4])
+        with self.pmd_rp[1].transport.open():
+            self.pmd_rp[1].set_actual_encoder_position(positions[4:8])
         print(f'set encoder position to {positions}')
 
 
