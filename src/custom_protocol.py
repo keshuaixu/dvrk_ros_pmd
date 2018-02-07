@@ -26,7 +26,8 @@ class PMDCustomProtocol:
         self.sock_rx.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock_rx.bind(('', rx_port))
         self.sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock_tx.setblocking(False)
+        # self.sock_tx.setblocking(False)
+        self.sock_tx.settimeout(0.1)
         self.rx_callback = None
 
     def start_receive_loop(self, callback):
