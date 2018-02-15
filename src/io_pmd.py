@@ -22,6 +22,8 @@ class IOPMD:
         self.arm = arm
 
         self.requested_current = [0.] * 8
+        self.requested_position_bias = None
+
         self.buffered_states = {
             'mode': [0.] * 8,
             'current': [0.] * 8,
@@ -104,21 +106,35 @@ class IOPMD:
 
     def set_current_cb(self, data):
         requested_current = data.data
+
+        command = 0
+        command_payload = (0,) * 8
+
+        if self.requested_position_bias is not None:
+            command = 0x01
+            command_payload = self.requested_position_bias
+            self.requested_position_bias = None
+
         mode = custom_protocol.MODES['current']
-        self.pmd_custom[0].send(mode=(mode,) * 4,
-                                motor_command=[int(custom_protocol.AMPS_TO_BITS * a) * 2 * current_direction[i] for i, a
-                                               in enumerate(requested_current[0:4])])
-        self.pmd_custom[1].send(mode=(mode,) * 4,
-                                motor_command=[int(custom_protocol.AMPS_TO_BITS * a) * 2 * current_direction[i + 4] for
-                                               i, a in enumerate(requested_current[4:8])])
+
+        motor_command = [int(custom_protocol.AMPS_TO_BITS * a) * 2 * current_direction[i] for i, a in
+                         enumerate(requested_current)]
+
+        motor_command = [min((max((-32767, c))), 32767) for c in motor_command]
+
+        self.pmd_custom[0].send(command=command, command_payload=command_payload[0:4], mode=(mode,) * 4,
+                                motor_command=motor_command[0:4])
+        self.pmd_custom[1].send(command=command, command_payload=command_payload[4:8], mode=(mode,) * 3 + (1,),
+                                motor_command=motor_command[4:8])
 
     def set_encoder_cb(self, data):
-        positions = data.data
-        with self.pmd_rp[0].transport.open():
-            self.pmd_rp[0].set_actual_encoder_position(positions[0:4])
-        with self.pmd_rp[1].transport.open():
-            self.pmd_rp[1].set_actual_encoder_position(positions[4:8])
-        print(f'set encoder position to {positions}')
+        self.requested_position_bias = data.data
+        # positions = data.data
+        # with self.pmd_rp[0].transport.open():
+        #     self.pmd_rp[0].set_actual_encoder_position(positions[0:4])
+        # with self.pmd_rp[1].transport.open():
+        #     self.pmd_rp[1].set_actual_encoder_position(positions[4:8])
+        print(f'set encoder position to {self.requested_position_bias}')
 
 
 if __name__ == '__main__':

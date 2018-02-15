@@ -61,3 +61,5 @@ class PMDCustomProtocol:
         packet = struct.pack(tx_format, command, *command_payload, *mode, *motor_command)
         with self.tx_lock:
             self.sock_tx.sendto(packet, self.address)
+
+
