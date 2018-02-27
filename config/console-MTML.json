@@ -1,13 +1,17 @@
 /* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 {
+    "io": {
+        "footpedals": "sawRobotIO1394-MTMR-foot-pedals.xml"
+    }
+    ,
     "arms":
     [
         {
-            "name": "MTML_SIM",
+            "name": "MTML",
             "type": "MTM",
-            "simulation": "KINEMATIC",
+            "io": "sawRobotIO1394-MTML-21768.xml",
             "pid": "sawControllersPID-MTML.xml",
-            "kinematic": "mtm.json"
+            "kinematic": "mtml.json"
         }
     ]
 }
