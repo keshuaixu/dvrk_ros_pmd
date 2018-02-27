@@ -4,7 +4,6 @@ import threading
 import rospy
 import logging
 
-from pypmd import PMD
 from std_msgs.msg import *
 
 import custom_protocol
@@ -43,7 +42,7 @@ class IOPMD:
 
         self.publish_sem = {0: threading.BoundedSemaphore(1), 4: threading.BoundedSemaphore(1)}
 
-        self.pmd_rp = (PMD(host=pmd1, open=False), PMD(host=pmd5, open=False))
+        # self.pmd_rp = (PMD(host=pmd1, open=False), PMD(host=pmd5, open=False))
 
         self.ros_io_namespace = f'/dvrk/{self.arm}/io/external'
 
@@ -129,11 +128,6 @@ class IOPMD:
 
     def set_encoder_cb(self, data):
         self.requested_position_bias = data.data
-        # positions = data.data
-        # with self.pmd_rp[0].transport.open():
-        #     self.pmd_rp[0].set_actual_encoder_position(positions[0:4])
-        # with self.pmd_rp[1].transport.open():
-        #     self.pmd_rp[1].set_actual_encoder_position(positions[4:8])
         print(f'set encoder position to {self.requested_position_bias}')
 
 
@@ -152,6 +146,4 @@ if __name__ == '__main__':
     print('pmd init')
 
     while not rospy.is_shutdown():
-        # io_pmd.sync_states()
-        # r.sleep()
         rospy.spin()
